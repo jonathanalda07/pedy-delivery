@@ -9,32 +9,53 @@ Plataforma de delivery para Paulicéia-SP e região, conectando clientes, estabe
 - Estilo: moderno, acessível e profissional.
 - Região inicial: Paulicéia-SP e cidades próximas.
 
-## Áreas da plataforma
-- **Clientes:** cadastro, autenticação, endereços, lojas, produtos, carrinho, pedidos e acompanhamento.
-- **Estabelecimentos:** perfil da loja, catálogo, disponibilidade, preços e gestão de pedidos.
-- **Entregadores:** cadastro, disponibilidade, ofertas de entrega e atualização de etapas.
-- **Administração:** gestão operacional, usuários, lojas, pedidos e atendimento.
-
 ## Stack
-- Aplicação web responsiva em TypeScript.
-- Firebase Authentication para identidade e sessões.
-- Cloud Firestore para dados.
-- Firebase Storage para imagens e documentos.
-- Regras de segurança do Firebase para autorização por perfil.
+- React + TypeScript + Vite.
+- Firebase Authentication.
+- Cloud Firestore.
+- Firebase Storage.
+- Firebase Hosting.
 
-Não versionar credenciais, tokens ou segredos de ambiente.
+## Estado atual
+A primeira versão da interface responsiva está criada, com:
+- Página inicial e identidade visual PEDY.
+- Navegação de áreas (cliente, estabelecimento e entregador).
+- Busca de estabelecimentos.
+- Catálogo demonstrativo e carrinho local.
+- Formulário de cadastro/login preparado para Firebase Authentication.
+- Configuração Firebase por variáveis de ambiente.
+- Regras iniciais do Firestore fechadas por padrão.
+- Pipeline GitHub Actions para typecheck e build.
 
-## Estrutura inicial
+**Atenção:** lojas, produtos e preços exibidos atualmente são dados demonstrativos. Não há pedidos reais, pagamento ou rastreamento de entregas ativo nesta etapa.
+
+## Rodar localmente
+1. Instale Node.js 20 ou superior.
+2. Execute `npm install`.
+3. Copie `.env.example` para `.env.local` e preencha os dados do app Web Firebase.
+4. Execute `npm run dev`.
+
+Para validar a compilação: `npm run build`.
+
+## Estrutura
 ```text
 pedy-delivery/
+├── .github/workflows/ci.yml
 ├── docs/
-│   └── product-overview.md
-├── .gitignore
-└── README.md
+│   ├── product-overview.md
+│   └── roadmap.md
+├── src/
+│   ├── App.tsx
+│   ├── firebase.ts
+│   ├── main.tsx
+│   └── styles.css
+├── .env.example
+├── firebase.json
+├── firestore.rules
+├── index.html
+├── package.json
+└── vite.config.ts
 ```
 
-## Desenvolvimento
-A implementação será incremental. Antes da produção, configurar projeto Firebase, provedores de autenticação, regras do Firestore e Storage, variáveis de ambiente e testes dos fluxos críticos.
-
-## Status
-Fundação e especificação inicial do produto.
+## Segurança
+Não versionar chaves privadas, tokens ou arquivos de ambiente reais. As regras do Firestore estão em modo deny-by-default até a implementação e validação das permissões por perfil.
