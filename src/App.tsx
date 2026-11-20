@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
 import type { User } from 'firebase/auth'
+import type { FormEvent } from 'react'
 import { auth, isFirebaseConfigured } from './firebase'
-import { ArrowRight, Bike, Check, ChevronDown, Clock3, MapPin, Menu, Minus, Plus, Search, ShoppingBag, Store, UserRound, X } from 'lucide-react'
+import { ArrowRight, Bike, ChevronDown, Clock3, MapPin, Menu, Minus, Plus, Search, ShoppingBag, Store, UserRound, X } from 'lucide-react'
 
 type Role = 'cliente' | 'loja' | 'entregador'
 type Product = { id: number; name: string; description: string; price: number; category: string; emoji: string }
@@ -58,7 +59,7 @@ export default function App() {
     return next
   })
 
-  const submitAuth = async (event: React.FormEvent<HTMLFormElement>) => {
+  const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setAuthError('')
     if (!auth) { setAuthError('O Firebase ainda não foi configurado. Aguarde a conexão do projeto.'); return }
