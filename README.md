@@ -34,7 +34,6 @@ Plataforma de delivery para Paulicéia-SP e região, conectando clientes, estabe
 - Publicar as regras de `firestore.rules` no projeto Firebase.
 - Criar documentos de lojas ativos na coleção `shops`, incluindo o array `products` com o cardápio.
 - Atribuir os perfis de administrador, comerciante e entregador pelo Firebase Console.
-- Cadastrar os estabelecimentos, produtos, preços e horários reais na coleção `shops`.
 - Definir taxa de entrega, integração de pagamento, notificações push e rastreamento GPS.
 
 **Importante:** o catálogo consulta em tempo real somente lojas com `active: true` e exibe os produtos cadastrados no array `products` de cada documento. Sem Firebase configurado, o catálogo fica vazio; nenhum estabelecimento ou produto fictício é exibido. O Firestore só aceitará pedidos para uma loja ativa existente na coleção `shops`. Não há cobrança de pagamento dentro do app; o método escolhido é registrado no pedido.
