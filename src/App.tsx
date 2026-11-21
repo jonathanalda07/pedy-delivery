@@ -12,21 +12,6 @@ type Profile = { role: Role; name?: string; shopId?: string; phone?: string; ema
 type Order = { id: string; customerId: string; customerName?: string; shopId: string; shopName: string; items: { name: string; price: number; quantity: number }[]; subtotal: number; total: number; address: string; reference?: string; payment: string; note?: string; status: string; courierId?: string | null; createdAt?: { toMillis?: () => number } }
 type ChatMessage = { id: string; senderId: string; senderName?: string; text: string; createdAt?: { toMillis?: () => number } }
 
-const demoShops: Shop[] = [
-  { id: 'pedy-burger', name: 'PEDY Burger', category: 'Hambúrgueres', time: '25–40 min', rating: 'Novo', emoji: '🍔', products: [
-    { id: '11', name: 'Smash clássico', description: 'Pão brioche, carne smash, queijo e molho da casa.', price: 24.9, category: 'Mais pedidos', emoji: '🍔', shopId: 'pedy-burger' },
-    { id: '12', name: 'Duplo cheddar', description: 'Dois smash burgers, cheddar cremoso e cebola.', price: 32.9, category: 'Mais pedidos', emoji: '🍔', shopId: 'pedy-burger' },
-    { id: '13', name: 'Batata crocante', description: 'Porção individual de batatas fritas.', price: 14.9, category: 'Acompanhamentos', emoji: '🍟', shopId: 'pedy-burger' },
-  ]},
-  { id: 'cantinho-pizza', name: 'Cantinho da Pizza', category: 'Pizzas', time: '35–50 min', rating: 'Novo', emoji: '🍕', products: [
-    { id: '21', name: 'Pizza muçarela', description: 'Molho artesanal, muçarela e orégano.', price: 39.9, category: 'Pizzas', emoji: '🍕', shopId: 'cantinho-pizza' },
-    { id: '22', name: 'Pizza calabresa', description: 'Calabresa fatiada, cebola e muçarela.', price: 44.9, category: 'Pizzas', emoji: '🍕', shopId: 'cantinho-pizza' },
-  ]},
-  { id: 'acai-praca', name: 'Açaí da Praça', category: 'Açaí e sobremesas', time: '20–35 min', rating: 'Novo', emoji: '🫐', products: [
-    { id: '31', name: 'Açaí 300 ml', description: 'Açaí cremoso com acompanhamentos à escolha.', price: 18.9, category: 'Açaí', emoji: '🫐', shopId: 'acai-praca' },
-    { id: '32', name: 'Açaí 500 ml', description: 'Açaí cremoso para matar a fome.', price: 26.9, category: 'Açaí', emoji: '🫐', shopId: 'acai-praca' },
-  ]},
-]
 const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const statusLabels: Record<string, string> = { recebido: 'Recebido', aceito: 'Aceito pela loja', preparando: 'Em preparação', pronto: 'Pronto para retirada', em_entrega: 'Saiu para entrega', entregue: 'Entregue', cancelado: 'Cancelado' }
 
@@ -39,7 +24,7 @@ export default function App() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [queryText, setQueryText] = useState('')
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null)
-  const [shops, setShops] = useState<Shop[]>(demoShops)
+  const [shops, setShops] = useState<Shop[]>([])
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [cart, setCart] = useState<Record<string, number>>({})
   const [cartOpen, setCartOpen] = useState(false)
@@ -81,7 +66,7 @@ export default function App() {
 
   useEffect(() => {
     if (!db) {
-      setShops(demoShops)
+      setShops([])
       setCatalogLoading(false)
       return
     }
@@ -229,7 +214,7 @@ export default function App() {
 
     {page === 'inicio' && <main>
       <section className="hero"><div className="hero-copy"><span className="eyebrow"><span className="pulse"/> DELIVERY LOCAL, DO SEU JEITO</span><h1>Bateu a fome?<br/><em>Pede na PEDY!</em></h1><p>Seu pedido favorito, pertinho de você. Descubra sabores de Paulicéia e região.</p><a className="hero-cta" href="#lojas">Ver estabelecimentos <ArrowRight size={18}/></a><div className="hero-note">❤️ Valorizando quem é daqui.</div></div><div className="hero-art"><div className="art-circle"/><div className="food-emoji">🍔</div><div className="art-tag"><Bike size={17}/> A fome não espera!</div></div></section>
-      <section className="discovery" id="lojas"><div className="section-heading"><div><span className="eyebrow red">ESCOLHA O QUE VAI PEDIR</span><h2>Tem coisa boa <em>por aqui.</em></h2></div><span className="results-count">{filteredShops.length} estabelecimentos</span></div><label className="search-box"><Search size={19}/><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Busque por loja ou tipo de comida..."/></label><div className="shop-grid">{filteredShops.map(shop => <button className="shop-card" key={shop.id} onClick={() => setSelectedShop(shop)}><div className={'shop-art shop-art-' + (shop.id === 'pedy-burger' ? 1 : shop.id === 'cantinho-pizza' ? 2 : 3)}><span>{shop.emoji}</span><small>{shop.rating}</small></div><div className="shop-info"><div><h3>{shop.name}</h3><p>{shop.category}</p></div><ArrowRight size={18}/></div><div className="shop-meta"><span><Clock3 size={14}/>{shop.time}</span><span>Taxa a calcular</span></div></button>)}{filteredShops.length === 0 && <div className="empty-state">Não encontramos lojas com esse termo.</div>}</div>{!isFirebaseConfigured && <p className="demo-note">Catálogo de demonstração. Configure o Firebase para carregar lojas e cardápios reais.</p>}{isFirebaseConfigured && catalogLoading && <p className="demo-note">Carregando lojas e cardápios...</p>}{isFirebaseConfigured && !catalogLoading && shops.length === 0 && <div className="empty-state">Nenhuma loja ativa com produtos cadastrados no PEDY ainda.</div>}</section>
+      <section className="discovery" id="lojas"><div className="section-heading"><div><span className="eyebrow red">ESCOLHA O QUE VAI PEDIR</span><h2>Tem coisa boa <em>por aqui.</em></h2></div><span className="results-count">{filteredShops.length} estabelecimentos</span></div><label className="search-box"><Search size={19}/><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Busque por loja ou tipo de comida..."/></label><div className="shop-grid">{filteredShops.map(shop => <button className="shop-card" key={shop.id} onClick={() => setSelectedShop(shop)}><div className={'shop-art shop-art-' + (shop.id === 'pedy-burger' ? 1 : shop.id === 'cantinho-pizza' ? 2 : 3)}><span>{shop.emoji}</span><small>{shop.rating}</small></div><div className="shop-info"><div><h3>{shop.name}</h3><p>{shop.category}</p></div><ArrowRight size={18}/></div><div className="shop-meta"><span><Clock3 size={14}/>{shop.time}</span><span>Taxa a calcular</span></div></button>)}{filteredShops.length === 0 && <div className="empty-state">Não encontramos lojas com esse termo.</div>}</div>{!isFirebaseConfigured && <p className="demo-note">Catálogo indisponível: configure o Firebase para exibir lojas e cardápios cadastrados.</p>}{isFirebaseConfigured && catalogLoading && <p className="demo-note">Carregando lojas e cardápios...</p>}{isFirebaseConfigured && !catalogLoading && shops.length === 0 && <div className="empty-state">Nenhuma loja ativa com produtos cadastrados no PEDY ainda.</div>}</section>
       <section className="how-section"><span className="eyebrow red">É FÁCIL PEDIR</span><h2>Seu pedido em <em>3 passos.</em></h2><div className="steps"><div><b>01</b><h3>Escolha</h3><p>Encontre sua loja e seus pratos favoritos.</p></div><div><b>02</b><h3>Peça</h3><p>Monte sua sacola e confirme seu pedido.</p></div><div><b>03</b><h3>Receba</h3><p>Acompanhe a entrega até chegar à sua porta.</p></div></div></section>
     </main>}
 
