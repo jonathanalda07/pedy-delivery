@@ -1,8 +1,116 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Deny all access until authenticated role-based rules are implemented
-    // and tested. Never open the database with allow read, write: if true.
+    function signedIn() {
+      return request.auth != null;
+    }
+    function userData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+    function role() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? userData(request.auth.uid).role
+        : null;
+    }
+    function isAdmin() {
+      return role() == 'admin';
+    }
+    function ownsShop(shopId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/shops/$(shopId))
+        && get(/databases/$(database)/documents/shops/$(shopId)).data.ownerId == request.auth.uid;
+    }
+    function canReadOrder(data) {
+      return signedIn() && (
+        isAdmin()
+        || data.customerId == request.auth.uid
+        || ownsShop(data.shopId)
+        || data.courierId == request.auth.uid
+        || (role() == 'entregador' && data.status == 'pronto' && data.courierId == null)
+      );
+    }
+
+    match /users/{uid} {
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == 'cliente'
+        && request.resource.data.email == request.auth.token.email;
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow update: if isAdmin() || (
+        signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'address'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /shops/{shopId} {
+      allow read: if resource.data.active == true || isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'description', 'phone', 'hours', 'imageUrl'])
+      );
+    }
+
+    match /orders/{orderId} {
+      allow create: if signedIn()
+        && role() == 'cliente'
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.status == 'recebido'
+        && request.resource.data.courierId == null
+        && request.resource.data.shopId is string
+        && exists(/databases/$(database)/documents/shops/$(request.resource.data.shopId))
+        && get(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.active == true
+        && request.resource.data.address is string
+        && request.resource.data.address.size() > 4
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.total is number;
+      allow read: if canReadOrder(resource.data);
+      allow update: if isAdmin() || (
+        ownsShop(resource.data.shopId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && (
+          (resource.data.status == 'recebido' && request.resource.data.status == 'aceito')
+          || (resource.data.status == 'aceito' && request.resource.data.status == 'preparando')
+          || (resource.data.status == 'preparando' && request.resource.data.status == 'pronto')
+        )
+      ) || (
+        role() == 'entregador'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'courierId'])
+        && (
+          (resource.data.status == 'pronto'
+            && resource.data.courierId == null
+            && request.resource.data.status == 'em_entrega'
+            && request.resource.data.courierId == request.auth.uid)
+          || (resource.data.status == 'em_entrega'
+            && resource.data.courierId == request.auth.uid
+            && request.resource.data.status == 'entregue'
+            && request.resource.data.courierId == request.auth.uid)
+        )
+      );
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        function parentOrder() {
+          return get(/databases/$(database)/documents/orders/$(orderId)).data;
+        }
+        allow read: if canReadOrder(parentOrder());
+        allow create: if canReadOrder(parentOrder())
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.senderRole == role()
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000;
+        allow update, delete: if false;
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
