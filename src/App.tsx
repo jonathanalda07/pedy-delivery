@@ -93,7 +93,7 @@ export default function App() {
         const data = shopDoc.data()
         const products = Array.isArray(data.products)
           ? data.products.map((item: DocumentData, index: number) => ({
-              id: String(item.id ?? (shopDoc.id + '-' + (index + 1))),
+              id: shopDoc.id + '-' + String(item.id ?? (index + 1)),
               name: String(item.name ?? 'Produto'),
               description: String(item.description ?? ''),
               price: Number(item.price ?? 0),
@@ -147,7 +147,7 @@ export default function App() {
   const cartCount = Object.values(cart).reduce((sum, quantity) => sum + quantity, 0)
   const cartTotal = cartItems.reduce((sum, product) => sum + product.price * cart[product.id], 0)
   const cartShop = cartItems[0] ? shops.find(s => s.id === cartItems[0].shopId) : null
-  const filteredShops = useMemo(() => shops.filter(shop => (shop.name + ' ' + shop.category + ' ' + shop.products.map(p => p.name).join(' ')).toLowerCase().includes(queryText.toLowerCase())), [queryText])
+  const filteredShops = useMemo(() => shops.filter(shop => (shop.name + ' ' + shop.category + ' ' + shop.products.map(p => p.name).join(' ')).toLowerCase().includes(queryText.toLowerCase())), [queryText, shops])
 
   const changeQuantity = (product: Product, delta: number) => {
     if (delta > 0 && cartItems.some(item => item.shopId !== product.shopId)) { setNotice('Cada pedido deve ser feito em uma loja por vez. Finalize ou esvazie a sacola atual.'); return }
