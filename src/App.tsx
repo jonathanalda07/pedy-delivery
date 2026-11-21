@@ -79,24 +79,24 @@ export default function App() {
         const products = Array.isArray(data.products)
           ? data.products.map((item: DocumentData, index: number) => ({
               id: shopDoc.id + '-' + String(item.id ?? (index + 1)),
-              name: String(item.name ?? 'Produto'),
+              name: String(item.name ?? ''),
               description: String(item.description ?? ''),
               price: Number(item.price ?? 0),
-              category: String(item.category ?? data.category ?? 'Cardápio'),
+              category: String(item.category ?? data.category ?? ''),
               emoji: String(item.emoji ?? '🍽️'),
               shopId: shopDoc.id,
-            })).filter((item: Product) => item.name && Number.isFinite(item.price) && item.price > 0)
+            })).filter((item: Product) => item.name.trim() && Number.isFinite(item.price) && item.price > 0)
           : []
         return {
           id: shopDoc.id,
-          name: String(data.name ?? 'Estabelecimento'),
-          category: String(data.category ?? 'Restaurante'),
-          time: String(data.time ?? 'Consultar prazo'),
-          rating: String(data.rating ?? 'Novo'),
+          name: String(data.name ?? ''),
+          category: String(data.category ?? ''),
+          time: String(data.time ?? ''),
+          rating: String(data.rating ?? ''),
           emoji: String(data.emoji ?? '🍽️'),
           products,
         } satisfies Shop
-      }).filter(shop => shop.products.length > 0)
+      }).filter(shop => shop.name.trim() && shop.products.length > 0)
       setShops(liveShops)
       setCatalogLoading(false)
     }, error => {
