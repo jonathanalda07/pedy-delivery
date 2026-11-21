@@ -3,7 +3,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndP
 import { addDoc, collection, doc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where, type DocumentData } from 'firebase/firestore'
 import type { FormEvent } from 'react'
 import { auth, db, isFirebaseConfigured } from './firebase'
-import { ArrowLeft, ArrowRight, Bike, Check, Clock3, CreditCard, LogOut, MapPin, MessageCircle, Minus, Plus, Search, Send, ShieldCheck, ShoppingBag, Store, UserRound, Wallet, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bike, Clock3, LogOut, MapPin, MessageCircle, Minus, Plus, Search, Send, ShieldCheck, ShoppingBag, Store, UserRound, Wallet, X } from 'lucide-react'
 
 type Role = 'cliente' | 'loja' | 'entregador' | 'admin'
 type Product = { id: number; name: string; description: string; price: number; category: string; emoji: string; shopId: string }
@@ -56,23 +56,25 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [draft, setDraft] = useState('')
-  const [searchRole, setSearchRole] = useState<'cliente' | 'loja' | 'entregador'>('cliente')
 
   useEffect(() => {
     if (!auth) return
-    return onAuthStateChanged(auth, async nextUser => {
+    let stopProfile = () => {}
+    const stopAuth = onAuthStateChanged(auth, nextUser => {
+      stopProfile()
       setUser(nextUser)
       setProfile(null)
       if (!nextUser || !db) return
       const profileRef = doc(db, 'users', nextUser.uid)
-      return onSnapshot(profileRef, async snapshot => {
+      stopProfile = onSnapshot(profileRef, snapshot => {
         if (snapshot.exists()) setProfile(snapshot.data() as Profile)
         else {
-          try { await setDoc(profileRef, { role: 'cliente', name: nextUser.displayName || nextUser.email?.split('@')[0] || 'Cliente', email: nextUser.email || '' }) }
-          catch { setNotice('Não foi possível criar seu perfil. Verifique as regras do Firestore.') }
+          void setDoc(profileRef, { role: 'cliente', name: nextUser.displayName || nextUser.email?.split('@')[0] || 'Cliente', email: nextUser.email || '' })
+            .catch(() => setNotice('Não foi possível criar seu perfil. Verifique as regras do Firestore.'))
         }
       })
     })
+    return () => { stopProfile(); stopAuth() }
   }, [])
 
   useEffect(() => {
