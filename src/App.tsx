@@ -14,17 +14,17 @@ type ChatMessage = { id: string; senderId: string; senderName?: string; text: st
 
 const demoShops: Shop[] = [
   { id: 'pedy-burger', name: 'PEDY Burger', category: 'Hambúrgueres', time: '25–40 min', rating: 'Novo', emoji: '🍔', products: [
-    { id: 11, name: 'Smash clássico', description: 'Pão brioche, carne smash, queijo e molho da casa.', price: 24.9, category: 'Mais pedidos', emoji: '🍔', shopId: 'pedy-burger' },
-    { id: 12, name: 'Duplo cheddar', description: 'Dois smash burgers, cheddar cremoso e cebola.', price: 32.9, category: 'Mais pedidos', emoji: '🍔', shopId: 'pedy-burger' },
-    { id: 13, name: 'Batata crocante', description: 'Porção individual de batatas fritas.', price: 14.9, category: 'Acompanhamentos', emoji: '🍟', shopId: 'pedy-burger' },
+    { id: '11', name: 'Smash clássico', description: 'Pão brioche, carne smash, queijo e molho da casa.', price: 24.9, category: 'Mais pedidos', emoji: '🍔', shopId: 'pedy-burger' },
+    { id: '12', name: 'Duplo cheddar', description: 'Dois smash burgers, cheddar cremoso e cebola.', price: 32.9, category: 'Mais pedidos', emoji: '🍔', shopId: 'pedy-burger' },
+    { id: '13', name: 'Batata crocante', description: 'Porção individual de batatas fritas.', price: 14.9, category: 'Acompanhamentos', emoji: '🍟', shopId: 'pedy-burger' },
   ]},
   { id: 'cantinho-pizza', name: 'Cantinho da Pizza', category: 'Pizzas', time: '35–50 min', rating: 'Novo', emoji: '🍕', products: [
-    { id: 21, name: 'Pizza muçarela', description: 'Molho artesanal, muçarela e orégano.', price: 39.9, category: 'Pizzas', emoji: '🍕', shopId: 'cantinho-pizza' },
-    { id: 22, name: 'Pizza calabresa', description: 'Calabresa fatiada, cebola e muçarela.', price: 44.9, category: 'Pizzas', emoji: '🍕', shopId: 'cantinho-pizza' },
+    { id: '21', name: 'Pizza muçarela', description: 'Molho artesanal, muçarela e orégano.', price: 39.9, category: 'Pizzas', emoji: '🍕', shopId: 'cantinho-pizza' },
+    { id: '22', name: 'Pizza calabresa', description: 'Calabresa fatiada, cebola e muçarela.', price: 44.9, category: 'Pizzas', emoji: '🍕', shopId: 'cantinho-pizza' },
   ]},
   { id: 'acai-praca', name: 'Açaí da Praça', category: 'Açaí e sobremesas', time: '20–35 min', rating: 'Novo', emoji: '🫐', products: [
-    { id: 31, name: 'Açaí 300 ml', description: 'Açaí cremoso com acompanhamentos à escolha.', price: 18.9, category: 'Açaí', emoji: '🫐', shopId: 'acai-praca' },
-    { id: 32, name: 'Açaí 500 ml', description: 'Açaí cremoso para matar a fome.', price: 26.9, category: 'Açaí', emoji: '🫐', shopId: 'acai-praca' },
+    { id: '31', name: 'Açaí 300 ml', description: 'Açaí cremoso com acompanhamentos à escolha.', price: 18.9, category: 'Açaí', emoji: '🫐', shopId: 'acai-praca' },
+    { id: '32', name: 'Açaí 500 ml', description: 'Açaí cremoso para matar a fome.', price: 26.9, category: 'Açaí', emoji: '🫐', shopId: 'acai-praca' },
   ]},
 ]
 const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
