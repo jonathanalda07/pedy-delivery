@@ -6,13 +6,13 @@ import { auth, db, isFirebaseConfigured } from './firebase'
 import { ArrowLeft, ArrowRight, Bike, Clock3, LogOut, MapPin, MessageCircle, Minus, Plus, Search, Send, ShieldCheck, ShoppingBag, Store, UserRound, Wallet, X } from 'lucide-react'
 
 type Role = 'cliente' | 'loja' | 'entregador' | 'admin'
-type Product = { id: number; name: string; description: string; price: number; category: string; emoji: string; shopId: string }
+type Product = { id: string; name: string; description: string; price: number; category: string; emoji: string; shopId: string }
 type Shop = { id: string; name: string; category: string; time: string; rating: string; emoji: string; products: Product[] }
 type Profile = { role: Role; name?: string; shopId?: string; phone?: string; email?: string }
 type Order = { id: string; customerId: string; customerName?: string; shopId: string; shopName: string; items: { name: string; price: number; quantity: number }[]; subtotal: number; total: number; address: string; reference?: string; payment: string; note?: string; status: string; courierId?: string | null; createdAt?: { toMillis?: () => number } }
 type ChatMessage = { id: string; senderId: string; senderName?: string; text: string; createdAt?: { toMillis?: () => number } }
 
-const shops: Shop[] = [
+const demoShops: Shop[] = [
   { id: 'pedy-burger', name: 'PEDY Burger', category: 'Hambúrgueres', time: '25–40 min', rating: 'Novo', emoji: '🍔', products: [
     { id: 11, name: 'Smash clássico', description: 'Pão brioche, carne smash, queijo e molho da casa.', price: 24.9, category: 'Mais pedidos', emoji: '🍔', shopId: 'pedy-burger' },
     { id: 12, name: 'Duplo cheddar', description: 'Dois smash burgers, cheddar cremoso e cebola.', price: 32.9, category: 'Mais pedidos', emoji: '🍔', shopId: 'pedy-burger' },
@@ -39,7 +39,9 @@ export default function App() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [queryText, setQueryText] = useState('')
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null)
-  const [cart, setCart] = useState<Record<number, number>>({})
+  const [shops, setShops] = useState<Shop[]>(demoShops)
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [cart, setCart] = useState<Record<string, number>>({})
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
@@ -77,6 +79,47 @@ export default function App() {
     return () => { stopProfile(); stopAuth() }
   }, [])
 
+  useEffect(() => {
+    if (!db) {
+      setShops(demoShops)
+      setCatalogLoading(false)
+      return
+    }
+    setShops([])
+    setCatalogLoading(true)
+    const activeShopsQuery = query(collection(db, 'shops'), where('active', '==', true))
+    return onSnapshot(activeShopsQuery, snapshot => {
+      const liveShops = snapshot.docs.map(shopDoc => {
+        const data = shopDoc.data()
+        const products = Array.isArray(data.products)
+          ? data.products.map((item: DocumentData, index: number) => ({
+              id: String(item.id ?? (shopDoc.id + '-' + (index + 1))),
+              name: String(item.name ?? 'Produto'),
+              description: String(item.description ?? ''),
+              price: Number(item.price ?? 0),
+              category: String(item.category ?? data.category ?? 'Cardápio'),
+              emoji: String(item.emoji ?? '🍽️'),
+              shopId: shopDoc.id,
+            })).filter((item: Product) => item.name && Number.isFinite(item.price) && item.price > 0)
+          : []
+        return {
+          id: shopDoc.id,
+          name: String(data.name ?? 'Estabelecimento'),
+          category: String(data.category ?? 'Restaurante'),
+          time: String(data.time ?? 'Consultar prazo'),
+          rating: String(data.rating ?? 'Novo'),
+          emoji: String(data.emoji ?? '🍽️'),
+          products,
+        } satisfies Shop
+      }).filter(shop => shop.products.length > 0)
+      setShops(liveShops)
+      setCatalogLoading(false)
+    }, error => {
+      setShops([])
+      setCatalogLoading(false)
+      setNotice('Não foi possível carregar as lojas: ' + error.message)
+    })
+  }, [])
   useEffect(() => {
     if (!user || !db || !profile) { setOrders([]); setAvailableOrders([]); return }
     let q
@@ -186,7 +229,7 @@ export default function App() {
 
     {page === 'inicio' && <main>
       <section className="hero"><div className="hero-copy"><span className="eyebrow"><span className="pulse"/> DELIVERY LOCAL, DO SEU JEITO</span><h1>Bateu a fome?<br/><em>Pede na PEDY!</em></h1><p>Seu pedido favorito, pertinho de você. Descubra sabores de Paulicéia e região.</p><a className="hero-cta" href="#lojas">Ver estabelecimentos <ArrowRight size={18}/></a><div className="hero-note">❤️ Valorizando quem é daqui.</div></div><div className="hero-art"><div className="art-circle"/><div className="food-emoji">🍔</div><div className="art-tag"><Bike size={17}/> A fome não espera!</div></div></section>
-      <section className="discovery" id="lojas"><div className="section-heading"><div><span className="eyebrow red">ESCOLHA O QUE VAI PEDIR</span><h2>Tem coisa boa <em>por aqui.</em></h2></div><span className="results-count">{filteredShops.length} estabelecimentos</span></div><label className="search-box"><Search size={19}/><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Busque por loja ou tipo de comida..."/></label><div className="shop-grid">{filteredShops.map(shop => <button className="shop-card" key={shop.id} onClick={() => setSelectedShop(shop)}><div className={'shop-art shop-art-' + (shop.id === 'pedy-burger' ? 1 : shop.id === 'cantinho-pizza' ? 2 : 3)}><span>{shop.emoji}</span><small>{shop.rating}</small></div><div className="shop-info"><div><h3>{shop.name}</h3><p>{shop.category}</p></div><ArrowRight size={18}/></div><div className="shop-meta"><span><Clock3 size={14}/>{shop.time}</span><span>Taxa a calcular</span></div></button>)}{filteredShops.length === 0 && <div className="empty-state">Não encontramos lojas com esse termo.</div>}</div><p className="demo-note">Catálogo de demonstração. Para receber pedidos reais, cada loja precisa ser cadastrada e ativada no Firebase.</p></section>
+      <section className="discovery" id="lojas"><div className="section-heading"><div><span className="eyebrow red">ESCOLHA O QUE VAI PEDIR</span><h2>Tem coisa boa <em>por aqui.</em></h2></div><span className="results-count">{filteredShops.length} estabelecimentos</span></div><label className="search-box"><Search size={19}/><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Busque por loja ou tipo de comida..."/></label><div className="shop-grid">{filteredShops.map(shop => <button className="shop-card" key={shop.id} onClick={() => setSelectedShop(shop)}><div className={'shop-art shop-art-' + (shop.id === 'pedy-burger' ? 1 : shop.id === 'cantinho-pizza' ? 2 : 3)}><span>{shop.emoji}</span><small>{shop.rating}</small></div><div className="shop-info"><div><h3>{shop.name}</h3><p>{shop.category}</p></div><ArrowRight size={18}/></div><div className="shop-meta"><span><Clock3 size={14}/>{shop.time}</span><span>Taxa a calcular</span></div></button>)}{filteredShops.length === 0 && <div className="empty-state">Não encontramos lojas com esse termo.</div>}</div>{!isFirebaseConfigured && <p className="demo-note">Catálogo de demonstração. Configure o Firebase para carregar lojas e cardápios reais.</p>}{isFirebaseConfigured && catalogLoading && <p className="demo-note">Carregando lojas e cardápios...</p>}{isFirebaseConfigured && !catalogLoading && shops.length === 0 && <div className="empty-state">Nenhuma loja ativa com produtos cadastrados no PEDY ainda.</div>}</section>
       <section className="how-section"><span className="eyebrow red">É FÁCIL PEDIR</span><h2>Seu pedido em <em>3 passos.</em></h2><div className="steps"><div><b>01</b><h3>Escolha</h3><p>Encontre sua loja e seus pratos favoritos.</p></div><div><b>02</b><h3>Peça</h3><p>Monte sua sacola e confirme seu pedido.</p></div><div><b>03</b><h3>Receba</h3><p>Acompanhe a entrega até chegar à sua porta.</p></div></div></section>
     </main>}
 
