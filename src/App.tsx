@@ -6,27 +6,12 @@ import { auth, db, isFirebaseConfigured } from './firebase'
 import { ArrowLeft, ArrowRight, Bike, Clock3, LogOut, MapPin, MessageCircle, Minus, Plus, Search, Send, ShieldCheck, ShoppingBag, Store, UserRound, Wallet, X } from 'lucide-react'
 
 type Role = 'cliente' | 'loja' | 'entregador' | 'admin'
-type Product = { id: number; name: string; description: string; price: number; category: string; emoji: string; shopId: string }
+type Product = { id: string; name: string; description: string; price: number; category: string; emoji: string; shopId: string }
 type Shop = { id: string; name: string; category: string; time: string; rating: string; emoji: string; products: Product[] }
 type Profile = { role: Role; name?: string; shopId?: string; phone?: string; email?: string }
 type Order = { id: string; customerId: string; customerName?: string; shopId: string; shopName: string; items: { name: string; price: number; quantity: number }[]; subtotal: number; total: number; address: string; reference?: string; payment: string; note?: string; status: string; courierId?: string | null; createdAt?: { toMillis?: () => number } }
 type ChatMessage = { id: string; senderId: string; senderName?: string; text: string; createdAt?: { toMillis?: () => number } }
 
-const shops: Shop[] = [
-  { id: 'pedy-burger', name: 'PEDY Burger', category: 'Hambúrgueres', time: '25–40 min', rating: 'Novo', emoji: '🍔', products: [
-    { id: 11, name: 'Smash clássico', description: 'Pão brioche, carne smash, queijo e molho da casa.', price: 24.9, category: 'Mais pedidos', emoji: '🍔', shopId: 'pedy-burger' },
-    { id: 12, name: 'Duplo cheddar', description: 'Dois smash burgers, cheddar cremoso e cebola.', price: 32.9, category: 'Mais pedidos', emoji: '🍔', shopId: 'pedy-burger' },
-    { id: 13, name: 'Batata crocante', description: 'Porção individual de batatas fritas.', price: 14.9, category: 'Acompanhamentos', emoji: '🍟', shopId: 'pedy-burger' },
-  ]},
-  { id: 'cantinho-pizza', name: 'Cantinho da Pizza', category: 'Pizzas', time: '35–50 min', rating: 'Novo', emoji: '🍕', products: [
-    { id: 21, name: 'Pizza muçarela', description: 'Molho artesanal, muçarela e orégano.', price: 39.9, category: 'Pizzas', emoji: '🍕', shopId: 'cantinho-pizza' },
-    { id: 22, name: 'Pizza calabresa', description: 'Calabresa fatiada, cebola e muçarela.', price: 44.9, category: 'Pizzas', emoji: '🍕', shopId: 'cantinho-pizza' },
-  ]},
-  { id: 'acai-praca', name: 'Açaí da Praça', category: 'Açaí e sobremesas', time: '20–35 min', rating: 'Novo', emoji: '🫐', products: [
-    { id: 31, name: 'Açaí 300 ml', description: 'Açaí cremoso com acompanhamentos à escolha.', price: 18.9, category: 'Açaí', emoji: '🫐', shopId: 'acai-praca' },
-    { id: 32, name: 'Açaí 500 ml', description: 'Açaí cremoso para matar a fome.', price: 26.9, category: 'Açaí', emoji: '🫐', shopId: 'acai-praca' },
-  ]},
-]
 const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const statusLabels: Record<string, string> = { recebido: 'Recebido', aceito: 'Aceito pela loja', preparando: 'Em preparação', pronto: 'Pronto para retirada', em_entrega: 'Saiu para entrega', entregue: 'Entregue', cancelado: 'Cancelado' }
 
@@ -39,7 +24,9 @@ export default function App() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [queryText, setQueryText] = useState('')
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null)
-  const [cart, setCart] = useState<Record<number, number>>({})
+  const [shops, setShops] = useState<Shop[]>([])
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [cart, setCart] = useState<Record<string, number>>({})
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
@@ -78,6 +65,47 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (!db) {
+      setShops([])
+      setCatalogLoading(false)
+      return
+    }
+    setShops([])
+    setCatalogLoading(true)
+    const activeShopsQuery = query(collection(db, 'shops'), where('active', '==', true))
+    return onSnapshot(activeShopsQuery, snapshot => {
+      const liveShops = snapshot.docs.map(shopDoc => {
+        const data = shopDoc.data()
+        const products = Array.isArray(data.products)
+          ? data.products.map((item: DocumentData, index: number) => ({
+              id: shopDoc.id + '-' + String(item.id ?? (index + 1)),
+              name: String(item.name ?? ''),
+              description: String(item.description ?? ''),
+              price: Number(item.price ?? 0),
+              category: String(item.category ?? data.category ?? ''),
+              emoji: String(item.emoji ?? '🍽️'),
+              shopId: shopDoc.id,
+            })).filter((item: Product) => item.name.trim() && Number.isFinite(item.price) && item.price > 0)
+          : []
+        return {
+          id: shopDoc.id,
+          name: String(data.name ?? ''),
+          category: String(data.category ?? ''),
+          time: String(data.time ?? ''),
+          rating: String(data.rating ?? ''),
+          emoji: String(data.emoji ?? '🍽️'),
+          products,
+        } satisfies Shop
+      }).filter(shop => shop.name.trim() && shop.products.length > 0)
+      setShops(liveShops)
+      setCatalogLoading(false)
+    }, error => {
+      setShops([])
+      setCatalogLoading(false)
+      setNotice('Não foi possível carregar as lojas: ' + error.message)
+    })
+  }, [])
+  useEffect(() => {
     if (!user || !db || !profile) { setOrders([]); setAvailableOrders([]); return }
     let q
     if (profile.role === 'admin') q = query(collection(db, 'orders'))
@@ -104,7 +132,7 @@ export default function App() {
   const cartCount = Object.values(cart).reduce((sum, quantity) => sum + quantity, 0)
   const cartTotal = cartItems.reduce((sum, product) => sum + product.price * cart[product.id], 0)
   const cartShop = cartItems[0] ? shops.find(s => s.id === cartItems[0].shopId) : null
-  const filteredShops = useMemo(() => shops.filter(shop => (shop.name + ' ' + shop.category + ' ' + shop.products.map(p => p.name).join(' ')).toLowerCase().includes(queryText.toLowerCase())), [queryText])
+  const filteredShops = useMemo(() => shops.filter(shop => (shop.name + ' ' + shop.category + ' ' + shop.products.map(p => p.name).join(' ')).toLowerCase().includes(queryText.toLowerCase())), [queryText, shops])
 
   const changeQuantity = (product: Product, delta: number) => {
     if (delta > 0 && cartItems.some(item => item.shopId !== product.shopId)) { setNotice('Cada pedido deve ser feito em uma loja por vez. Finalize ou esvazie a sacola atual.'); return }
@@ -186,7 +214,7 @@ export default function App() {
 
     {page === 'inicio' && <main>
       <section className="hero"><div className="hero-copy"><span className="eyebrow"><span className="pulse"/> DELIVERY LOCAL, DO SEU JEITO</span><h1>Bateu a fome?<br/><em>Pede na PEDY!</em></h1><p>Seu pedido favorito, pertinho de você. Descubra sabores de Paulicéia e região.</p><a className="hero-cta" href="#lojas">Ver estabelecimentos <ArrowRight size={18}/></a><div className="hero-note">❤️ Valorizando quem é daqui.</div></div><div className="hero-art"><div className="art-circle"/><div className="food-emoji">🍔</div><div className="art-tag"><Bike size={17}/> A fome não espera!</div></div></section>
-      <section className="discovery" id="lojas"><div className="section-heading"><div><span className="eyebrow red">ESCOLHA O QUE VAI PEDIR</span><h2>Tem coisa boa <em>por aqui.</em></h2></div><span className="results-count">{filteredShops.length} estabelecimentos</span></div><label className="search-box"><Search size={19}/><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Busque por loja ou tipo de comida..."/></label><div className="shop-grid">{filteredShops.map(shop => <button className="shop-card" key={shop.id} onClick={() => setSelectedShop(shop)}><div className={'shop-art shop-art-' + (shop.id === 'pedy-burger' ? 1 : shop.id === 'cantinho-pizza' ? 2 : 3)}><span>{shop.emoji}</span><small>{shop.rating}</small></div><div className="shop-info"><div><h3>{shop.name}</h3><p>{shop.category}</p></div><ArrowRight size={18}/></div><div className="shop-meta"><span><Clock3 size={14}/>{shop.time}</span><span>Taxa a calcular</span></div></button>)}{filteredShops.length === 0 && <div className="empty-state">Não encontramos lojas com esse termo.</div>}</div><p className="demo-note">Catálogo de demonstração. Para receber pedidos reais, cada loja precisa ser cadastrada e ativada no Firebase.</p></section>
+      <section className="discovery" id="lojas"><div className="section-heading"><div><span className="eyebrow red">ESCOLHA O QUE VAI PEDIR</span><h2>Tem coisa boa <em>por aqui.</em></h2></div><span className="results-count">{filteredShops.length} estabelecimentos</span></div><label className="search-box"><Search size={19}/><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Busque por loja ou tipo de comida..."/></label><div className="shop-grid">{filteredShops.map(shop => <button className="shop-card" key={shop.id} onClick={() => setSelectedShop(shop)}><div className="shop-art"><span>{shop.emoji}</span><small>{shop.rating}</small></div><div className="shop-info"><div><h3>{shop.name}</h3><p>{shop.category}</p></div><ArrowRight size={18}/></div><div className="shop-meta"><span><Clock3 size={14}/>{shop.time}</span><span>Taxa a calcular</span></div></button>)}{filteredShops.length === 0 && <div className="empty-state">Não encontramos lojas com esse termo.</div>}</div>{!isFirebaseConfigured && <p className="info-note">Catálogo indisponível: configure o Firebase para exibir lojas e cardápios cadastrados.</p>}{isFirebaseConfigured && catalogLoading && <p className="info-note">Carregando lojas e cardápios...</p>}{isFirebaseConfigured && !catalogLoading && shops.length === 0 && <div className="empty-state">Nenhuma loja ativa com produtos cadastrados no PEDY ainda.</div>}</section>
       <section className="how-section"><span className="eyebrow red">É FÁCIL PEDIR</span><h2>Seu pedido em <em>3 passos.</em></h2><div className="steps"><div><b>01</b><h3>Escolha</h3><p>Encontre sua loja e seus pratos favoritos.</p></div><div><b>02</b><h3>Peça</h3><p>Monte sua sacola e confirme seu pedido.</p></div><div><b>03</b><h3>Receba</h3><p>Acompanhe a entrega até chegar à sua porta.</p></div></div></section>
     </main>}
 
@@ -206,9 +234,9 @@ export default function App() {
 
     {selectedShop && <div className="overlay" onMouseDown={e => { if (e.target === e.currentTarget) setSelectedShop(null) }}><section className="side-panel"><div className="panel-head"><div><span className="eyebrow red">CARDÁPIO</span><h2>{selectedShop.name}</h2><p>{selectedShop.category} · {selectedShop.time}</p></div><button className="icon-button" onClick={() => setSelectedShop(null)}><X/></button></div>{selectedShop.products.map(product => <div className="product-row" key={product.id}><div className="product-emoji">{product.emoji}</div><div className="product-detail"><h3>{product.name}</h3><p>{product.description}</p><strong>{money(product.price)}</strong></div><button className="add-button" onClick={() => changeQuantity(product,1)}><Plus size={17}/></button></div>)}<button className="primary-wide" onClick={() => { setSelectedShop(null); setCartOpen(true) }}>Ver sacola ({cartCount}) <ArrowRight size={17}/></button></section></div>}
 
-    {cartOpen && <div className="overlay" onMouseDown={e => { if (e.target === e.currentTarget) setCartOpen(false) }}><section className="side-panel"><div className="panel-head"><div><span className="eyebrow red">SEU PEDIDO</span><h2>Sua sacola</h2><p>{cartCount} {cartCount === 1 ? 'item' : 'itens'}</p></div><button className="icon-button" onClick={() => setCartOpen(false)}><X/></button></div>{cartItems.length ? <>{cartItems.map(product => <div className="cart-row" key={product.id}><span className="product-emoji">{product.emoji}</span><div className="product-detail"><h3>{product.name}</h3><strong>{money(product.price * cart[product.id])}</strong></div><div className="quantity"><button onClick={() => changeQuantity(product,-1)}><Minus size={14}/></button><b>{cart[product.id]}</b><button onClick={() => changeQuantity(product,1)}><Plus size={14}/></button></div></div>)}<div className="cart-total"><span>Subtotal</span><strong>{money(cartTotal)}</strong></div><p className="demo-note">A taxa de entrega será definida pela loja ou pela operação local.</p><button className="primary-wide" onClick={() => { setCartOpen(false); setCheckoutOpen(true) }}>Ir para entrega e pagamento <ArrowRight size={17}/></button></> : <div className="cart-empty"><ShoppingBag size={35}/><h3>Sua sacola está vazia</h3><p>Escolha uma loja e adicione seus favoritos.</p><button className="primary-wide" onClick={() => setCartOpen(false)}>Explorar lojas</button></div>}</section></div>}
+    {cartOpen && <div className="overlay" onMouseDown={e => { if (e.target === e.currentTarget) setCartOpen(false) }}><section className="side-panel"><div className="panel-head"><div><span className="eyebrow red">SEU PEDIDO</span><h2>Sua sacola</h2><p>{cartCount} {cartCount === 1 ? 'item' : 'itens'}</p></div><button className="icon-button" onClick={() => setCartOpen(false)}><X/></button></div>{cartItems.length ? <>{cartItems.map(product => <div className="cart-row" key={product.id}><span className="product-emoji">{product.emoji}</span><div className="product-detail"><h3>{product.name}</h3><strong>{money(product.price * cart[product.id])}</strong></div><div className="quantity"><button onClick={() => changeQuantity(product,-1)}><Minus size={14}/></button><b>{cart[product.id]}</b><button onClick={() => changeQuantity(product,1)}><Plus size={14}/></button></div></div>)}<div className="cart-total"><span>Subtotal</span><strong>{money(cartTotal)}</strong></div><p className="info-note">A taxa de entrega será definida pela loja ou pela operação local.</p><button className="primary-wide" onClick={() => { setCartOpen(false); setCheckoutOpen(true) }}>Ir para entrega e pagamento <ArrowRight size={17}/></button></> : <div className="cart-empty"><ShoppingBag size={35}/><h3>Sua sacola está vazia</h3><p>Escolha uma loja e adicione seus favoritos.</p><button className="primary-wide" onClick={() => setCartOpen(false)}>Explorar lojas</button></div>}</section></div>}
 
-    {checkoutOpen && <div className="overlay"><section className="side-panel"><div className="panel-head"><div><span className="eyebrow red">FINALIZAR PEDIDO</span><h2>Entrega e pagamento</h2><p>{cartShop?.name} · {money(cartTotal)}</p></div><button className="icon-button" onClick={() => setCheckoutOpen(false)}><X/></button></div><form className="checkout-form" onSubmit={placeOrder}><label>Endereço completo<input required value={address} onChange={e => setAddress(e.target.value)} placeholder="Rua, número e bairro"/></label><label>Ponto de referência<input value={reference} onChange={e => setReference(e.target.value)} placeholder="Ex.: perto da praça"/></label><label>Forma de pagamento<select value={payment} onChange={e => setPayment(e.target.value)}><option value="pix">Pix</option><option value="dinheiro">Dinheiro</option><option value="cartao">Cartão na entrega</option></select></label><label>Observações<textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Alguma orientação para a loja ou entregador?"/></label><div className="cart-total"><span>Total dos produtos</span><strong>{money(cartTotal)}</strong></div><p className="demo-note">O valor exibido não inclui taxa de entrega. O pedido só será gravado quando a loja estiver cadastrada e as regras do Firestore estiverem ativas.</p><button className="primary-wide" disabled={busy || !user}>{busy ? 'Enviando...' : 'Confirmar pedido'} <ArrowRight size={17}/></button>{!user && <button type="button" className="secondary-button" onClick={() => setAuthOpen(true)}>Entrar ou criar conta</button>}</form></section></div>}
+    {checkoutOpen && <div className="overlay"><section className="side-panel"><div className="panel-head"><div><span className="eyebrow red">FINALIZAR PEDIDO</span><h2>Entrega e pagamento</h2><p>{cartShop?.name} · {money(cartTotal)}</p></div><button className="icon-button" onClick={() => setCheckoutOpen(false)}><X/></button></div><form className="checkout-form" onSubmit={placeOrder}><label>Endereço completo<input required value={address} onChange={e => setAddress(e.target.value)} placeholder="Rua, número e bairro"/></label><label>Ponto de referência<input value={reference} onChange={e => setReference(e.target.value)} placeholder="Ex.: perto da praça"/></label><label>Forma de pagamento<select value={payment} onChange={e => setPayment(e.target.value)}><option value="pix">Pix</option><option value="dinheiro">Dinheiro</option><option value="cartao">Cartão na entrega</option></select></label><label>Observações<textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Alguma orientação para a loja ou entregador?"/></label><div className="cart-total"><span>Total dos produtos</span><strong>{money(cartTotal)}</strong></div><p className="info-note">O valor exibido não inclui taxa de entrega. O pedido só será gravado quando a loja estiver cadastrada e as regras do Firestore estiverem ativas.</p><button className="primary-wide" disabled={busy || !user}>{busy ? 'Enviando...' : 'Confirmar pedido'} <ArrowRight size={17}/></button>{!user && <button type="button" className="secondary-button" onClick={() => setAuthOpen(true)}>Entrar ou criar conta</button>}</form></section></div>}
 
     {authOpen && <div className="overlay" onMouseDown={e => { if (e.target === e.currentTarget) setAuthOpen(false) }}><section className="auth-panel"><button className="icon-button close-auth" onClick={() => setAuthOpen(false)}><X/></button><span className="brand-mark auth-mark">P</span><span className="eyebrow red">BEM-VINDO À PEDY</span><h2>{authMode === 'signup' ? 'Crie sua conta.' : 'Que bom ter você de volta.'}</h2><p>Cadastro inicial para clientes. Perfis de loja e entregador são liberados pelo administrador.</p><div className="auth-tabs"><button className={authMode === 'signup' ? 'selected' : ''} onClick={() => setAuthMode('signup')}>Criar conta</button><button className={authMode === 'login' ? 'selected' : ''} onClick={() => setAuthMode('login')}>Entrar</button></div><form onSubmit={submitAuth}>{authMode === 'signup' && <label>Seu nome<input required value={name} onChange={e => setName(e.target.value)} placeholder="Como podemos te chamar?"/></label>}<label>E-mail<input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@email.com"/></label><label>Senha<input type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo de 6 caracteres"/></label>{authError && <p className="auth-error">{authError}</p>}<button className="primary-wide" disabled={busy}>{busy ? 'Aguarde...' : authMode === 'signup' ? 'Criar minha conta' : 'Entrar'} <ArrowRight size={17}/></button></form>{!isFirebaseConfigured && <small className="config-warning">Autenticação aguardando as credenciais do Firebase.</small>}</section></div>}
     {notice && <div className="toast" role="status">{notice}<button onClick={() => setNotice('')}><X size={15}/></button></div>}
