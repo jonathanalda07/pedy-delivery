@@ -16,7 +16,7 @@ Plataforma de delivery para Paulicéia-SP e região, conectando clientes, estabe
 - Firebase Hosting.
 
 ## O que já está implementado
-- Página inicial com busca e catálogo em tempo real no Firestore (com catálogo demonstrativo apenas quando o Firebase não está configurado).
+- Página inicial com busca e catálogo em tempo real no Firestore; não há lojas ou produtos de demonstração.
 - Sacola que limita cada pedido a uma loja por vez.
 - Checkout com endereço, referência, pagamento e observações.
 - Cadastro e login de clientes por e-mail e senha.
@@ -37,7 +37,7 @@ Plataforma de delivery para Paulicéia-SP e região, conectando clientes, estabe
 - Cadastrar os estabelecimentos, produtos, preços e horários reais na coleção `shops`.
 - Definir taxa de entrega, integração de pagamento, notificações push e rastreamento GPS.
 
-**Importante:** com o Firebase configurado, o catálogo consulta em tempo real somente lojas com `active: true` e exibe os produtos do array `products` de cada documento. Sem Firebase configurado, a interface usa dados demonstrativos. O Firestore só aceitará pedidos para uma loja ativa existente na coleção `shops`. Não há cobrança de pagamento dentro do app; o método escolhido é registrado no pedido.
+**Importante:** o catálogo consulta em tempo real somente lojas com `active: true` e exibe os produtos cadastrados no array `products` de cada documento. Sem Firebase configurado, o catálogo fica vazio; nenhum estabelecimento ou produto fictício é exibido. O Firestore só aceitará pedidos para uma loja ativa existente na coleção `shops`. Não há cobrança de pagamento dentro do app; o método escolhido é registrado no pedido.
 
 ## Configuração do Firebase
 
@@ -58,42 +58,9 @@ O cadastro público cria somente perfil `cliente`. Para proteger a plataforma, o
 4. Crie `shops/{ID_DA_LOJA}` com pelo menos `name`, `ownerId` (UID do comerciante) e `active: true`.
 5. Para cada entregador, crie a conta pelo app e altere `role` para `entregador`.
 
-Exemplo de documento em `shops/pedy-burger`:
-```json
-{
-  "name": "PEDY Burger",
-  "ownerId": "UID_DO_COMERCIANTE",
-  "active": true
-}
-```
+O documento de cada loja deve ficar em `shops/{ID_REAL_DA_LOJA}` e conter, no mínimo, `name` (nome real do estabelecimento), `ownerId` (UID do comerciante) e `active: true`. O campo `products` deve ser um array com os produtos reais do cardápio; cada produto precisa ter `name` e `price` maior que zero. Podem ser incluídos também `description`, `category` e `emoji`. Não crie documentos de lojas ou produtos de exemplo em produção.
 
-O catálogo lê os campos abaixo do documento da loja. O campo `products` é um array de produtos; cada produto precisa ter nome e preço maior que zero.
-
-```json
-{
-  "name": "Minha lanchonete",
-  "ownerId": "UID_DO_COMERCIANTE",
-  "active": true,
-  "category": "Hambúrgueres",
-  "time": "25–40 min",
-  "rating": "Novo",
-  "emoji": "🍔",
-  "products": [
-    {
-      "id": "smash-classico",
-      "name": "Smash clássico",
-      "description": "Pão, carne, queijo e molho da casa.",
-      "price": 24.90,
-      "category": "Hambúrgueres",
-      "emoji": "🍔"
-    }
-  ]
-}
-```
-
-O ID do documento da loja deve ser exatamente o mesmo valor de `shopId` no perfil do comerciante. Ao editar o documento no Firestore, o catálogo do aplicativo recebe a atualização automaticamente.
-
-O ID da loja precisa corresponder ao `shopId` do perfil do comerciante e ao identificador usado pelo catálogo. Os IDs demonstrativos atuais são `pedy-burger`, `cantinho-pizza` e `acai-praca`. Crie somente os documentos das lojas reais que forem operar. O painel administrativo nesta etapa acompanha pedidos e indicadores; o cadastro inicial de perfis e lojas é feito pelo Firebase Console.
+O ID do documento da loja deve ser exatamente o mesmo valor de `shopId` no perfil do comerciante. Ao editar o documento no Firestore, o catálogo do aplicativo recebe a atualização automaticamente. O cadastro inicial de perfis e lojas é feito pelo Firebase Console.
 
 ## Rodar localmente
 
