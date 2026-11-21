@@ -9,7 +9,8 @@
 - [ ] Ativar provedores de autenticação e validar cadastro/login.
 - [ ] Definir perfis, permissões e aprovação de estabelecimentos/entregadores.
 - [ ] Modelar Firestore: users, stores, products, orders, deliveries, addresses.
-- [ ] Implementar catálogo real, carrinho persistente e checkout.
+- [x] Carregar lojas ativas e seus cardápios do Firestore em tempo real.
+- [ ] Implementar carrinho persistente e checkout com taxa de entrega.
 - [ ] Implementar operação de loja e entregador.
 - [ ] Implementar status de pedido em tempo real.
 - [ ] Testes, revisão de segurança e publicação.
