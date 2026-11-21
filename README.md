@@ -4,46 +4,84 @@
 
 Plataforma de delivery para Paulicéia-SP e região, conectando clientes, estabelecimentos e entregadores.
 
-## Identidade
-- Cores: preto, laranja e branco.
-- Estilo: moderno, acessível e profissional.
+## Identidade visual
+- Cores principais: vermelho e branco.
+- Interface responsiva para celular e computador.
 - Região inicial: Paulicéia-SP e cidades próximas.
 
-## Stack
+## Tecnologias
 - React + TypeScript + Vite.
 - Firebase Authentication.
-- Cloud Firestore.
-- Firebase Storage.
+- Cloud Firestore (pedidos, perfis e mensagens em tempo real).
 - Firebase Hosting.
 
-## Estado atual
-A primeira versão da interface responsiva está criada, com:
-- Página inicial e identidade visual PEDY.
-- Navegação de áreas (cliente, estabelecimento e entregador).
-- Busca de estabelecimentos.
-- Catálogo demonstrativo e carrinho local.
-- Formulário de cadastro/login preparado para Firebase Authentication.
-- Configuração Firebase por variáveis de ambiente.
-- Regras iniciais do Firestore fechadas por padrão.
-- Pipeline GitHub Actions para typecheck e build.
+## O que já está implementado
+- Página inicial com busca e catálogo demonstrativo.
+- Sacola que limita cada pedido a uma loja por vez.
+- Checkout com endereço, referência, pagamento e observações.
+- Cadastro e login de clientes por e-mail e senha.
+- Criação de pedidos no Firestore.
+- Painel de pedidos por perfil: cliente, loja, entregador e administrador.
+- Atualização do fluxo: recebido → aceito → preparando → pronto → em entrega → entregue.
+- Ofertas de entrega disponíveis para entregadores.
+- Chat em tempo real vinculado ao pedido.
+- Regras iniciais do Firestore com controle de acesso por perfil.
 
-**Atenção:** lojas, produtos e preços exibidos atualmente são dados demonstrativos. Não há pedidos reais, pagamento ou rastreamento de entregas ativo nesta etapa.
+## O que ainda exige configuração
+- Ativar o provedor E-mail/Senha em Firebase Authentication.
+- Criar o banco Cloud Firestore.
+- Configurar as variáveis do Firebase no GitHub Actions.
+- Publicar as regras de `firestore.rules` no projeto Firebase.
+- Criar documentos de lojas ativos na coleção `shops`.
+- Atribuir os perfis de administrador, comerciante e entregador pelo Firebase Console.
+- Substituir os estabelecimentos e preços demonstrativos por dados reais.
+- Definir taxa de entrega, integração de pagamento, notificações push e rastreamento GPS.
+
+**Importante:** o catálogo inicial ainda é demonstrativo. O Firestore só aceitará pedidos para uma loja que exista na coleção `shops` e esteja com `active: true`. Não há cobrança de pagamento dentro do app; o método escolhido é registrado no pedido.
+
+## Configuração do Firebase
+
+1. No Firebase Console, abra o projeto `pedy-delivery`.
+2. Em Authentication → Sign-in method, habilite **E-mail/senha**.
+3. Crie o banco em Firestore Database.
+4. Copie `.env.example` para `.env.local` e preencha os dados do app Web.
+5. Publique o conteúdo de `firestore.rules` no Firestore → Regras. Não use regras abertas.
+6. No GitHub, configure os secrets `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` e `FIREBASE_SERVICE_ACCOUNT_PEDY_DELIVERY`.
+
+### Primeiro administrador e perfis
+
+O cadastro público cria somente perfil `cliente`. Para proteger a plataforma, os papéis privilegiados não podem ser escolhidos pelo próprio usuário.
+
+1. Crie sua conta de administrador pelo app.
+2. No Firestore, abra `users/{UID_DA_CONTA}` e altere `role` para `admin`.
+3. Para cada comerciante, crie a conta pelo app e atualize o documento `users/{UID}` para `role: loja` e `shopId: ID_DA_LOJA`.
+4. Crie `shops/{ID_DA_LOJA}` com pelo menos `name`, `ownerId` (UID do comerciante) e `active: true`.
+5. Para cada entregador, crie a conta pelo app e altere `role` para `entregador`.
+
+Exemplo de documento em `shops/pedy-burger`:
+```json
+{
+  "name": "PEDY Burger",
+  "ownerId": "UID_DO_COMERCIANTE",
+  "active": true
+}
+```
+
+O ID da loja precisa corresponder ao `shopId` do perfil do comerciante e ao identificador usado pelo catálogo.
 
 ## Rodar localmente
+
 1. Instale Node.js 20 ou superior.
 2. Execute `npm install`.
-3. Copie `.env.example` para `.env.local` e preencha os dados do app Web Firebase.
+3. Configure `.env.local`.
 4. Execute `npm run dev`.
-
-Para validar a compilação: `npm run build`.
+5. Para validar: `npm run build`.
 
 ## Estrutura
 ```text
 pedy-delivery/
-├── .github/workflows/ci.yml
+├── .github/workflows/
 ├── docs/
-│   ├── product-overview.md
-│   └── roadmap.md
 ├── src/
 │   ├── App.tsx
 │   ├── firebase.ts
@@ -52,10 +90,11 @@ pedy-delivery/
 ├── .env.example
 ├── firebase.json
 ├── firestore.rules
-├── index.html
-├── package.json
-└── vite.config.ts
+└── package.json
 ```
 
 ## Segurança
-Não versionar chaves privadas, tokens ou arquivos de ambiente reais. As regras do Firestore estão em modo deny-by-default até a implementação e validação das permissões por perfil.
+- Nunca versionar `.env.local`, chaves privadas ou tokens.
+- Não permitir que usuários escolham ou alterem seu próprio papel.
+- As regras do Firestore validam a propriedade da loja, do pedido e da conversa.
+- Não configurar `allow read, write: if true`.
