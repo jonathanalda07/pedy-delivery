@@ -46,7 +46,7 @@ Plataforma de delivery para Paulicéia-SP e região, conectando clientes, estabe
 3. Crie o banco em Firestore Database.
 4. Copie `.env.example` para `.env.local` e preencha os dados do app Web.
 5. Publique o conteúdo de `firestore.rules` no Firestore → Regras. Não use regras abertas.
-6. No GitHub, configure os secrets `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` e `FIREBASE_SERVICE_ACCOUNT_PEDY_DELIVERY`.
+6. No GitHub, em Settings → Secrets and variables → Actions → New repository secret, configure os secrets `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` e `FIREBASE_SERVICE_ACCOUNT_PEDY_DELIVERY`.
 
 ### Primeiro administrador e perfis
 
@@ -67,7 +67,7 @@ Exemplo de documento em `shops/pedy-burger`:
 }
 ```
 
-O ID da loja precisa corresponder ao `shopId` do perfil do comerciante e ao identificador usado pelo catálogo.
+O ID da loja precisa corresponder ao `shopId` do perfil do comerciante e ao identificador usado pelo catálogo. Os IDs demonstrativos atuais são `pedy-burger`, `cantinho-pizza` e `acai-praca`. Crie somente os documentos das lojas reais que forem operar. O painel administrativo nesta etapa acompanha pedidos e indicadores; o cadastro inicial de perfis e lojas é feito pelo Firebase Console.
 
 ## Rodar localmente
 
